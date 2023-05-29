@@ -2,7 +2,7 @@ local default_config = require "cmp_ghq.default_config"
 local Ghq = require "cmp_ghq.ghq"
 local Logger = require "cmp_ghq.logger"
 
----@class cmp_ghq.source.Source
+---@class cmp_ghq.source.Source: cmp.Source
 ---@field log cmp_ghq.logger.Logger
 ---@field ghq cmp_ghq.ghq.Ghq
 local Source = {}
