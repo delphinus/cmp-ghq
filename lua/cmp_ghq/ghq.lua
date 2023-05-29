@@ -56,9 +56,9 @@ function Ghq:list(cb)
         end)
       end
     end
-    self.log:debug("items: %s", #items)
-    self.log:debug("waiting line: %s", #vim.tbl_keys(self._git_jobs))
-    cb(items)
+    local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
+    self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
+    cb { items = items, isIncomplete = is_incomplete }
   end)
   j:start()
 end
