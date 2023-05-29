@@ -35,10 +35,7 @@ function Git:parse_url(url)
   url = url:gsub(".git$", "")
   url = url:gsub("^[^:]+://", "")
   url = url:gsub("^[^@]+@", "")
-  local host, org, repo = url:match "^([^:]+):([^/]+)/(.+)"
-  if not host then
-    host, org, repo = url:match "^([^/]+)/([^/]+)/(.+)"
-  end
+  local host, org, repo = url:match "^([^:/]+)[:/]([^/]+)/(.+)"
   return host and { host = host, org = org, repo = repo } or nil
 end
 
