@@ -18,7 +18,7 @@ Source.new = function(overrides)
   }, { __index = Source })
 end
 
-function Source:complete(params, callback)
+function Source:complete(_, callback)
   self.log:debug "completion start"
   self.ghq:list(callback)
 end
