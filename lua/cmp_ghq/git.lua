@@ -39,6 +39,15 @@ function Git:parse_url(url)
   return host and { host = host, org = org, repo = repo } or nil
 end
 
+---@param line string?
+---@return cmp_ghq.git.Remote?
+function Git:parse_line(line)
+  if line then
+    local url = line:match "^%S+%s+(%S+)" --[[@as string?]]
+    return self:parse_url(url)
+  end
+end
+
 ---@param cb fun(result: cmp_ghq.git.Remote): nil
 ---@return table
 function Git:remote(dir, cb)
@@ -47,12 +56,9 @@ function Git:remote(dir, cb)
     local origin = vim.iter(j:result()):find(function(line)
       return not not line:match "^origin"
     end)
-    local url = origin:match "^%S+%s+(%S+)"
-    if url then
-      local remote = self:parse_url(url)
-      if remote then
-        cb(remote)
-      end
+    local remote = self:parse_line(origin)
+    if remote then
+      cb(remote)
     end
   end)
   j:start()
