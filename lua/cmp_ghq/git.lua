@@ -1,7 +1,12 @@
 local Job = require "plenary.job"
 
+---@class cmp_ghq.git.Opts
+---@field executable string?
+---@field default_remotes string[]?
+
 ---@class cmp_ghq.git.Config
 ---@field executable string
+---@field default_remotes string[]
 
 ---@class cmp_ghq.git.Remote
 ---@field host string
@@ -10,20 +15,23 @@ local Job = require "plenary.job"
 
 ---@class cmp_ghq.git.Git
 ---@field config cmp_ghq.git.Config
+---@field default_remotes_re string
 ---@field log cmp_ghq.logger.Logger
 local Git = {}
 
 ---@type cmp_ghq.git.Config
-local default_config = { executable = "git" }
+local default_config = { default_remotes = { "origin" }, executable = "git" }
 
 ---@param log cmp_ghq.logger.Logger
----@param overrides table?
+---@param opts cmp_ghq.git.Opts?
 ---@return cmp_ghq.git.Git
-Git.new = function(log, overrides)
-  return setmetatable(
-    { config = vim.tbl_extend("force", default_config, overrides or {}), log = log },
+Git.new = function(log, opts)
+  local self = setmetatable(
+    { config = vim.tbl_extend("force", default_config, opts or {}), log = log },
     { __index = Git }
   )
+  self.default_remotes_re = ("^(%s)"):format(table.concat(self.config.default_remotes, "|"))
+  return self
 end
 
 ---@param url string?
@@ -54,7 +62,7 @@ function Git:remote(dir, cb)
   local j = Job:new { command = self.config.executable, args = { "remote", "-v" }, cwd = dir }
   j:after_success(function()
     local origin = vim.iter(j:result()):find(function(line)
-      return not not line:match "^origin"
+      return not not line:match(self.default_remotes_re)
     end)
     local remote = self:parse_line(origin)
     if remote then
