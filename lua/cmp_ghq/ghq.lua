@@ -37,7 +37,7 @@ function Ghq:list(cb)
     args = { "list", "-p" },
   }
   j:after_success(function()
-    for _, line in ipairs(j:result()) do
+    vim.iter(j:result()):each(function(line)
       local host, org, repo = line:match "(github.[^/]+)/([^/]+)/([^?]+)$"
       if host then
         table.insert(items, { label = host .. "/" .. org .. "/" .. repo })
@@ -55,7 +55,7 @@ function Ghq:list(cb)
           self._git_jobs[line] = nil
         end)
       end
-    end
+    end)
     local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
     self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
     cb { items = items, isIncomplete = is_incomplete }
