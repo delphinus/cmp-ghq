@@ -1,5 +1,6 @@
+local a = require "plenary.async_lib"
 local Git = require "cmp_ghq.git"
-local Job = require "plenary.job"
+local AsyncJob = require "cmp_ghq.async_job"
 
 ---@class cmp_ghq.ghq.Config
 ---@field executable string
@@ -29,15 +30,18 @@ Ghq.new = function(log, overrides)
 end
 
 ---@param cb function
+---@return function
 function Ghq:list(cb)
-  local items = {}
-  self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
-  local j = Job:new {
-    command = self.config.executable,
-    args = { "list", "-p" },
-  }
-  j:after_success(function()
-    vim.iter(j:result()):each(function(line)
+  return function()
+    local items = {}
+    self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
+    ---@type string[]?, string[]?
+    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
+    if err then
+      cb { items = {}, isIncomplete = true }
+      return
+    end
+    vim.iter(result):each(function(line)
       local host, org, repo = line:match "(github.[^/]+)/([^/]+)/([^?]+)$"
       if host then
         table.insert(items, { label = host .. "/" .. org .. "/" .. repo })
@@ -47,20 +51,25 @@ function Ghq:list(cb)
           table.insert(items, v)
         end)
       elseif not self._git_jobs[line] then
-        self._git_jobs[line] = self.git:remote(line, function(result)
+        ---@param err string[]?
+        ---@param result cmp_ghq.git.Remote?
+        self._git_jobs[line] = self.git:remote(line, function(err, result)
+          if err then
+            return
+          end
+          ---@cast result cmp_ghq.git.Remote
           self._cache[line] = {
             { label = result.host .. "/" .. result.org .. "/" .. result.repo },
             { label = result.org .. "/" .. result.repo },
           }
           self._git_jobs[line] = nil
-        end)
+        end)()
       end
     end)
     local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
     self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
     cb { items = items, isIncomplete = is_incomplete }
-  end)
-  j:start()
+  end
 end
 
 return Ghq

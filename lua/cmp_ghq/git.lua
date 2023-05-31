@@ -1,4 +1,5 @@
-local Job = require "plenary.job"
+local a = require "plenary.async_lib"
+local AsyncJob = require "cmp_ghq.async_job"
 
 ---@class cmp_ghq.git.Opts
 ---@field executable string?
@@ -56,21 +57,23 @@ function Git:parse_line(line)
   end
 end
 
----@param cb fun(result: cmp_ghq.git.Remote): nil
----@return table
+---@param cb fun(err: string[]?, result: cmp_ghq.git.Remote?): nil
+---@return function
 function Git:remote(dir, cb)
-  local j = Job:new { command = self.config.executable, args = { "remote", "-v" }, cwd = dir }
-  j:after_success(function()
-    local origin = vim.iter(j:result()):find(function(line)
+  return function()
+    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
+    if err then
+      cb(err)
+      return
+    end
+    local origin = vim.iter(result):find(function(line)
       return not not line:match(self.default_remotes_re)
     end)
     local remote = self:parse_line(origin)
     if remote then
-      cb(remote)
+      cb(nil, remote)
     end
-  end)
-  j:start()
-  return j
+  end
 end
 
 return Git

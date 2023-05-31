@@ -1,3 +1,4 @@
+local a = require "plenary.async_lib"
 local default_config = require "cmp_ghq.default_config"
 local Ghq = require "cmp_ghq.ghq"
 local Logger = require "cmp_ghq.logger"
@@ -20,7 +21,7 @@ end
 
 function Source:complete(_, callback)
   self.log:debug "completion start"
-  self.ghq:list(callback)
+  a.async_void(self.ghq:list(callback))()
 end
 
 function Source:get_debug_name()
