@@ -19,10 +19,10 @@ Source.new = function(overrides)
   }, { __index = Source })
 end
 
-function Source:complete(_, callback)
+Source.complete = a.async_void(function(self, _, callback)
   self.log:debug "completion start"
-  a.async_void(self.ghq:list(callback))()
-end
+  callback(self.ghq:list())
+end)
 
 function Source:get_debug_name()
   return "ghq"

@@ -32,65 +32,61 @@ Ghq.new = function(log, overrides)
   }, { __index = Ghq })
 end
 
----@param cb function
----@return function
-function Ghq:list(cb)
-  return function()
-    local items = {}
-    self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
-    if not self._roots then
-      local err, result = a.await(AsyncJob { command = self.config.executable, args = { "root", "--all" } })
-      if err then
+---@return table[]
+function Ghq:list()
+  local items = {}
+  self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
+  if not self._roots then
+    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "root", "--all" } })
+    if err then
+      return {}
+    end
+    self._roots = result
+  end
+  ---@type string[]?, string[]?
+  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
+  if err then
+    return { items = {}, isIncomplete = true }
+  end
+  vim.iter(result):each(function(line)
+    local parent_root = vim.iter(self._roots):find(function(root)
+      local s = line:find(root, nil, true)
+      return not not s
+    end)
+    if parent_root then
+      local dir = Path:new(line):make_relative(parent_root)
+      local host, org, repo = dir:match "^([^/]+)/([^/]+)/([^/]+)$"
+      if host then
+        table.insert(items, { label = host .. "/" .. org .. "/" .. repo })
+        table.insert(items, { label = org .. "/" .. repo })
+        table.insert(items, { label = repo })
         return
       end
-      self._roots = result
     end
-    ---@type string[]?, string[]?
-    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
-    if err then
-      cb { items = {}, isIncomplete = true }
-      return
-    end
-    vim.iter(result):each(function(line)
-      local parent_root = vim.iter(self._roots):find(function(root)
-        local s = line:find(root, nil, true)
-        return not not s
+    if self._cache[line] then
+      vim.iter(self._cache[line]):each(function(v)
+        table.insert(items, v)
       end)
-      if parent_root then
-        local dir = Path:new(line):make_relative(parent_root)
-        local host, org, repo = dir:match "^([^/]+)/([^/]+)/([^/]+)$"
-        if host then
-          table.insert(items, { label = host .. "/" .. org .. "/" .. repo })
-          table.insert(items, { label = org .. "/" .. repo })
-          table.insert(items, { label = repo })
+    elseif not self._git_jobs[line] then
+      ---@param err string[]?
+      ---@param result cmp_ghq.git.Remote?
+      self._git_jobs[line] = self.git:remote(line, function(err, result)
+        if err then
           return
         end
-      end
-      if self._cache[line] then
-        vim.iter(self._cache[line]):each(function(v)
-          table.insert(items, v)
-        end)
-      elseif not self._git_jobs[line] then
-        ---@param err string[]?
-        ---@param result cmp_ghq.git.Remote?
-        self._git_jobs[line] = self.git:remote(line, function(err, result)
-          if err then
-            return
-          end
-          ---@cast result cmp_ghq.git.Remote
-          self._cache[line] = {
-            { label = result.host .. "/" .. result.org .. "/" .. result.repo },
-            { label = result.org .. "/" .. result.repo },
-            { label = result.repo },
-          }
-          self._git_jobs[line] = nil
-        end)()
-      end
-    end)
-    local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
-    self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
-    cb { items = items, isIncomplete = is_incomplete }
-  end
+        ---@cast result cmp_ghq.git.Remote
+        self._cache[line] = {
+          { label = result.host .. "/" .. result.org .. "/" .. result.repo },
+          { label = result.org .. "/" .. result.repo },
+          { label = result.repo },
+        }
+        self._git_jobs[line] = nil
+      end)()
+    end
+  end)
+  local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
+  self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
+  return { items = items, isIncomplete = is_incomplete }
 end
 
 return Ghq
