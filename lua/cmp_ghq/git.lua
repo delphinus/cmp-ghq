@@ -57,22 +57,22 @@ function Git:parse_line(line)
   end
 end
 
-function Git:remote(dir, cb)
-  return function()
-    self.log:debug "git remote -v"
-    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
-    if err then
-      cb(err)
-      return
-    end
-    local origin = vim.iter(result):find(function(line)
-      return not not line:match(self.default_remotes_re)
-    end)
-    local remote = self:parse_line(origin)
-    if remote then
-      cb(nil, remote)
-    end
+---@param dir string
+---@return string[]?, cmp_ghq.git.Remote?
+function Git:remote(dir)
+  self.log:debug "git remote -v"
+  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
+  if err then
+    return err
   end
+  local origin = vim.iter(result):find(function(line)
+    return not not line:match(self.default_remotes_re)
+  end)
+  local remote = self:parse_line(origin)
+  if remote then
+    return nil, remote
+  end
+  return { "remote not found" }
 end
 
 return Git

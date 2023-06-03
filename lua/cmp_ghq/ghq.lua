@@ -12,7 +12,7 @@ local AsyncJob = require "cmp_ghq.async_job"
 ---@field log cmp_ghq.logger.Logger
 ---@field _roots string[]?
 ---@field _cache table<string, table>
----@field _git_jobs table<string, table>
+---@field _git_jobs table<string, boolean>
 local Ghq = {}
 
 ---@type cmp_ghq.ghq.Config
@@ -73,19 +73,20 @@ function Ghq:list()
         table.insert(items, v)
       end)
     elseif not self._git_jobs[line] then
-      ---@param err string[]?
-      ---@param result cmp_ghq.git.Remote?
-      self._git_jobs[line] = self.git:remote(line, function(err, result)
-        if err then
-          return
-        end
-        ---@cast result cmp_ghq.git.Remote
-        self._cache[line] = {
-          { label = result.host .. "/" .. result.org .. "/" .. result.repo },
-          { label = result.org .. "/" .. result.repo },
-          { label = result.repo },
-        }
-        self._git_jobs[line] = nil
+      self._git_jobs[line] = true
+      coroutine.wrap(function()
+        a.async_void(function()
+          local err, result = self.git:remote(line)
+          if not err then
+            ---@cast result cmp_ghq.git.Remote
+            self._cache[line] = {
+              { label = result.host .. "/" .. result.org .. "/" .. result.repo },
+              { label = result.org .. "/" .. result.repo },
+              { label = result.repo },
+            }
+          end
+          self._git_jobs[line] = nil
+        end)()
       end)()
     end
   end)
