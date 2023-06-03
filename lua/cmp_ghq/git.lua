@@ -57,10 +57,9 @@ function Git:parse_line(line)
   end
 end
 
----@param cb fun(err: string[]?, result: cmp_ghq.git.Remote?): nil
----@return function
 function Git:remote(dir, cb)
   return function()
+    self.log:debug "git remote -v"
     local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
     if err then
       cb(err)

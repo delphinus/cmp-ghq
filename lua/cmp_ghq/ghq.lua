@@ -34,20 +34,25 @@ end
 
 ---@return table[]
 function Ghq:list()
+  self.log:debug "ghq:list()"
   local items = {}
   self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
   if not self._roots then
+    self.log:debug "ghq root --all"
     local err, result = a.await(AsyncJob { command = self.config.executable, args = { "root", "--all" } })
     if err then
       return {}
     end
     self._roots = result
   end
+  self.log:debug "ghq list -p"
   ---@type string[]?, string[]?
   local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
   if err then
+    self.log:debug("ghq list -p: %s", err)
     return { items = {}, isIncomplete = true }
   end
+  self.log:debug "iter start"
   vim.iter(result):each(function(line)
     local parent_root = vim.iter(self._roots):find(function(root)
       local s = line:find(root, nil, true)
@@ -84,6 +89,7 @@ function Ghq:list()
       end)()
     end
   end)
+  self.log:debug "iter end"
   local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
   self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
   return { items = items, isIncomplete = is_incomplete }
