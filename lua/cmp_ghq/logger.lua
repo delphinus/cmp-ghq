@@ -1,3 +1,5 @@
+local uv = vim.loop
+
 ---@alias cmp_ghq.ghq.RawLogger fun(msg: string, level: integer): nil
 
 ---@class cmp_ghq.log.Opts
@@ -10,6 +12,7 @@
 
 ---@class cmp_ghq.logger.Logger
 ---@field config cmp_ghq.log.Config
+---@field started integer
 local Logger = {}
 
 ---@type cmp_ghq.log.Opts
@@ -21,7 +24,10 @@ local default_options = {
 ---@param opts cmp_ghq.log.Opts
 ---@return cmp_ghq.logger.Logger
 Logger.new = function(opts)
-  return setmetatable({ config = vim.tbl_extend("force", default_options, opts or {}) }, { __index = Logger })
+  return setmetatable(
+    { config = vim.tbl_extend("force", default_options, opts or {}), started = uv.hrtime() },
+    { __index = Logger }
+  )
 end
 
 ---@param fmt string
@@ -29,12 +35,11 @@ end
 ---@param level integer
 function Logger:log(fmt, args, level)
   local count = 0
-  local formatted = fmt:gsub("%%s", function()
-    count = count + 1
-    local arg = args[count]
-    return type(arg) ~= "string" and vim.inspect(arg, { indent = "", newline = "" }) or arg
-  end)
-  self.config.raw_logger("[cmp-ghq] " .. formatted, level)
+  local inspected = vim.iter.map(function(v)
+    return type(v) == "table" and vim.inspect(v, { indent = "", newline = "" }) or v
+  end, args)
+  local now = (uv.hrtime() - self.started) / 1000000000
+  self.config.raw_logger(("[cmp-ghq] (%.3f) " .. fmt):format(now, unpack(inspected)), level)
 end
 
 ---@param fmt string
