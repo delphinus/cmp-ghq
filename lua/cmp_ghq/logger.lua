@@ -25,10 +25,15 @@ local default_options = {
 ---@param opts cmp_ghq.log.Opts
 ---@return cmp_ghq.logger.Logger
 Logger.new = function(opts)
-  return setmetatable(
+  local self = setmetatable(
     { count = 0, config = vim.tbl_extend("force", default_options, opts or {}), started = uv.hrtime() },
     { __index = Logger }
   )
+  -- Disable logging if debug: false (default)
+  if not self.config.debug then
+    self.log = function() end
+  end
+  return self
 end
 
 ---@param fmt string
