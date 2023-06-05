@@ -10,6 +10,7 @@ local AsyncJob = require "cmp_ghq.async_job"
 ---@field config cmp_ghq.ghq.Config
 ---@field git cmp_ghq.git.Git
 ---@field log cmp_ghq.logger.Logger
+---@field _semaphore Semaphore
 ---@field _roots string[]?
 ---@field _cache table<string, table>
 ---@field _git_jobs table<string, boolean>
@@ -26,6 +27,7 @@ Ghq.new = function(log, overrides)
     config = vim.tbl_extend("force", default_config, overrides or {}),
     git = Git.new(log),
     log = log,
+    _semaphore = a.util.Semaphore.new(5),
     _roots = nil,
     _cache = {},
     _git_jobs = {},
@@ -74,26 +76,33 @@ function Ghq:list()
       end)
     elseif not self._git_jobs[line] then
       self._git_jobs[line] = true
-      coroutine.wrap(function()
-        a.async_void(function()
-          local err, result = self.git:remote(line)
-          if not err then
-            ---@cast result cmp_ghq.git.Remote
-            self._cache[line] = {
-              { label = result.host .. "/" .. result.org .. "/" .. result.repo },
-              { label = result.org .. "/" .. result.repo },
-              { label = result.repo },
-            }
-          end
-          self._git_jobs[line] = nil
-        end)()
-      end)()
     end
   end)
   self.log:debug "iter end"
   local is_incomplete = #vim.tbl_keys(self._git_jobs) > 0
   self.log:debug("items: %s, isIncomplete: %s", #items, is_incomplete)
   return { items = items, isIncomplete = is_incomplete }
+end
+
+function Ghq:fetch_remotes()
+  self.log:debug("start: permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
+  vim.iter(self._git_jobs):each(function(url)
+    a.run(a.async(function()
+      local permit = a.await(self._semaphore:acquire() --[[@as Future]])
+      self.log:debug("permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
+      local err, result = self.git:remote(url)
+      if not err then
+        ---@cast result cmp_ghq.git.Remote
+        self._cache[url] = {
+          { label = result.host .. "/" .. result.org .. "/" .. result.repo },
+          { label = result.org .. "/" .. result.repo },
+          { label = result.repo },
+        }
+      end
+      self._git_jobs[url] = nil
+      permit:forget()
+    end)())
+  end)
 end
 
 return Ghq

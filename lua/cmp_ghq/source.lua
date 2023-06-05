@@ -22,6 +22,7 @@ end
 Source.complete = a.async_void(function(self, _, callback)
   self.log:debug "completion start"
   callback(self.ghq:list())
+  self.ghq:fetch_remotes()
 end)
 
 function Source:get_debug_name()
