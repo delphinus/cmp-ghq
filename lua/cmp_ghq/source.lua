@@ -1,3 +1,4 @@
+local a = require "plenary.async_lib"
 local default_config = require "cmp_ghq.default_config"
 local Ghq = require "cmp_ghq.ghq"
 local Logger = require "cmp_ghq.logger"
@@ -18,10 +19,11 @@ Source.new = function(overrides)
   }, { __index = Source })
 end
 
-function Source:complete(_, callback)
+Source.complete = a.async_void(function(self, _, callback)
   self.log:debug "completion start"
-  self.ghq:list(callback)
-end
+  callback(self.ghq:list())
+  self.ghq:fetch_remotes()
+end)
 
 function Source:get_debug_name()
   return "ghq"
