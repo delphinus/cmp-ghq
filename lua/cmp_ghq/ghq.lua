@@ -85,11 +85,8 @@ function Ghq:list()
 end
 
 function Ghq:fetch_remotes()
-  self.log:debug("start: permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
   vim.iter(self._git_jobs):each(function(url)
     a.run(a.async(function()
-      local permit = a.await(self._semaphore:acquire() --[[@as Future]])
-      self.log:debug("permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
       local err, result = self.git:remote(url)
       if not err then
         ---@cast result cmp_ghq.git.Remote
@@ -100,7 +97,6 @@ function Ghq:fetch_remotes()
         }
       end
       self._git_jobs[url] = nil
-      permit:forget()
     end)())
   end)
 end
