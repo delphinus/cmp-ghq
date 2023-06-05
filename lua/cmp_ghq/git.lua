@@ -60,7 +60,6 @@ end
 ---@param dir string
 ---@return string[]?, cmp_ghq.git.Remote?
 function Git:remote(dir)
-  self.log:debug "git remote -v"
   local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
   if err then
     return err

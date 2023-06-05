@@ -11,6 +11,7 @@ local uv = vim.loop
 ---@field debug boolean
 
 ---@class cmp_ghq.logger.Logger
+---@field count integer
 ---@field config cmp_ghq.log.Config
 ---@field started integer
 local Logger = {}
@@ -25,7 +26,7 @@ local default_options = {
 ---@return cmp_ghq.logger.Logger
 Logger.new = function(opts)
   return setmetatable(
-    { config = vim.tbl_extend("force", default_options, opts or {}), started = uv.hrtime() },
+    { count = 0, config = vim.tbl_extend("force", default_options, opts or {}), started = uv.hrtime() },
     { __index = Logger }
   )
 end
@@ -34,12 +35,12 @@ end
 ---@param args any[]
 ---@param level integer
 function Logger:log(fmt, args, level)
-  local count = 0
   local inspected = vim.iter.map(function(v)
     return type(v) == "table" and vim.inspect(v, { indent = "", newline = "" }) or v
   end, args)
   local now = (uv.hrtime() - self.started) / 1000000000
-  self.config.raw_logger(("[cmp-ghq] (%.3f) " .. fmt):format(now, unpack(inspected)), level)
+  self.count = self.count + 1
+  self.config.raw_logger(("[cmp-ghq] %d (%.3f) " .. fmt):format(self.count, now, unpack(inspected)), level)
 end
 
 ---@param fmt string
