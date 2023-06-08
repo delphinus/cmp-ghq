@@ -1,17 +1,6 @@
 local a = require "plenary.async_lib"
 local Job = require "plenary.job"
 
----@class cmp_ghq.async_system.Config
----@field concurrency integer
-
----@class cmp_ghq.async_system.Options
----@field cwd string?
-
----@class cmp_ghq.async_system.AsyncSystem
----@field config cmp_ghq.async_system.Config
----@field _semaphore Semaphore
----@operator call(string[], cmp_ghq.async_system.Options): Future
-
 local async_system = a.wrap(vim.system, 3)
 
 local function split(lines)
@@ -22,6 +11,17 @@ local function split(lines)
     end)
     :totable()
 end
+
+---@class cmp_ghq.async_system.Config
+---@field concurrency integer
+
+---@class cmp_ghq.async_system.Options
+---@field cwd string?
+
+---@class cmp_ghq.async_system.AsyncSystem
+---@field config cmp_ghq.async_system.Config
+---@field _semaphore Semaphore
+---@operator call(string[], cmp_ghq.async_system.Options): Future
 
 return setmetatable({ config = { concurrency = 5 } }, {
   ---@param self cmp_ghq.async_system.AsyncSystem
@@ -39,4 +39,4 @@ return setmetatable({ config = { concurrency = 5 } }, {
     end
     return split(result.stderr)
   end),
-})
+}) --[[@as cmp_ghq.async_system.AsyncSystem]]
