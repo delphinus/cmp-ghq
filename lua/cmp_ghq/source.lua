@@ -21,7 +21,9 @@ end
 
 Source.complete = a.async_void(function(self, _, callback)
   self.log:debug "completion start"
-  callback(self.ghq:list())
+  local list = self.ghq:list()
+  self:_remove_duplicates(list)
+  callback(list)
   self.ghq:fetch_remotes()
 end)
 
@@ -39,6 +41,18 @@ end
 
 function Source:get_trigger_characters()
   return { "." }
+end
+
+---@param list lsp.CompletionList
+function Source:_remove_duplicates(list)
+  local seen = {}
+  list.items = vim.iter(list.items):fold({}, function(a, b)
+    if not seen[b.label] then
+      table.insert(a, b)
+      seen[b.label] = true
+    end
+    return a
+  end)
 end
 
 return Source

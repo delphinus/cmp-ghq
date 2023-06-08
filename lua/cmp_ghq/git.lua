@@ -1,5 +1,5 @@
 local a = require "plenary.async_lib"
-local AsyncJob = require "cmp_ghq.async_job"
+local AsyncSystem = require "cmp_ghq.async_system"
 
 ---@class cmp_ghq.git.Opts
 ---@field executable string?
@@ -8,11 +8,6 @@ local AsyncJob = require "cmp_ghq.async_job"
 ---@class cmp_ghq.git.Config
 ---@field executable string
 ---@field default_remotes string[]
-
----@class cmp_ghq.git.Remote
----@field host string
----@field org string
----@field repo string
 
 ---@class cmp_ghq.git.Git
 ---@field config cmp_ghq.git.Config
@@ -36,20 +31,18 @@ Git.new = function(log, opts)
 end
 
 ---@param url string?
----@return cmp_ghq.git.Remote?
+---@return string?
 function Git:parse_url(url)
-  if not url then
-    return nil
+  if url then
+    url = url:gsub(".git$", "")
+    url = url:gsub("^[^:]+://", "")
+    url = url:gsub("^[^@]+@", "")
+    return url
   end
-  url = url:gsub(".git$", "")
-  url = url:gsub("^[^:]+://", "")
-  url = url:gsub("^[^@]+@", "")
-  local host, org, repo = url:match "^([^:/]+)[:/]([^/]+)/(.+)"
-  return host and { host = host, org = org, repo = repo } or nil
 end
 
 ---@param line string?
----@return cmp_ghq.git.Remote?
+---@return string?
 function Git:parse_line(line)
   if line then
     local url = line:match "^%S+%s+(%S+)" --[[@as string?]]
@@ -58,9 +51,9 @@ function Git:parse_line(line)
 end
 
 ---@param dir string
----@return string[]?, cmp_ghq.git.Remote?
+---@return string[]?, string?
 function Git:remote(dir)
-  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
+  local err, result = a.await(AsyncSystem({ self.config.executable, "remote", "-v" }, { cwd = dir }))
   if err then
     return err
   end

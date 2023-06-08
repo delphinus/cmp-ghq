@@ -1,7 +1,8 @@
+local lsp = require "cmp.types.lsp"
 local a = require "plenary.async_lib"
 local Path = require "plenary.path"
 local Git = require "cmp_ghq.git"
-local AsyncJob = require "cmp_ghq.async_job"
+local AsyncSystem = require "cmp_ghq.async_system"
 
 ---@class cmp_ghq.ghq.Config
 ---@field executable string
@@ -11,7 +12,7 @@ local AsyncJob = require "cmp_ghq.async_job"
 ---@field git cmp_ghq.git.Git
 ---@field log cmp_ghq.logger.Logger
 ---@field _semaphore Semaphore
----@field _roots string[]?
+---@field _root string?
 ---@field _cache table<string, table>
 ---@field _git_jobs table<string, boolean>
 local Ghq = {}
@@ -28,47 +29,61 @@ Ghq.new = function(log, overrides)
     git = Git.new(log),
     log = log,
     _semaphore = a.util.Semaphore.new(5),
-    _roots = nil,
+    _root = nil,
     _cache = {},
     _git_jobs = {},
   }, { __index = Ghq })
 end
 
+---@param dir string
+---@return lsp.CompletionItem[]
+function Ghq:make_candidates(dir)
+  local parts = vim.split(dir, "/")
+  local items = {}
+  local function add(label)
+    table.insert(items, { label = label, kind = lsp.CompletionItemKind.Folder, documentation = dir })
+  end
+  vim.iter(ipairs(parts)):each(function(i, part)
+    if #part > 2 then
+      add(part)
+    end
+    if i < #parts then
+      add(table.concat(vim.iter(parts):slice(i, #parts):totable(), "/"))
+    end
+  end)
+  return items
+end
+
 ---@return table[]
 function Ghq:list()
   self.log:debug "ghq:list()"
-  local items = {}
   self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
-  if not self._roots then
-    self.log:debug "ghq root --all"
-    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "root", "--all" } })
+  if not self._root then
+    self.log:debug "ghq root"
+    local err, result = a.await(AsyncSystem { self.config.executable, "root" })
     if err then
       return {}
     end
-    self._roots = result
+    self._root = result[1]
   end
   self.log:debug "ghq list -p"
   ---@type string[]?, string[]?
-  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
+  local err, result = a.await(AsyncSystem { self.config.executable, "list", "-p" })
   if err then
     self.log:debug("ghq list -p: %s", err)
     return { items = {}, isIncomplete = true }
   end
   self.log:debug "iter start"
+  local items = {}
   vim.iter(result):each(function(line)
-    local parent_root = vim.iter(self._roots):find(function(root)
-      local s = line:find(root, nil, true)
-      return not not s
-    end)
-    if parent_root then
-      local dir = Path:new(line):make_relative(parent_root)
-      local host, org, repo = dir:match "^([^/]+)/([^/]+)/([^/]+)$"
-      if host then
-        table.insert(items, { label = host .. "/" .. org .. "/" .. repo })
-        table.insert(items, { label = org .. "/" .. repo })
-        table.insert(items, { label = repo })
-        return
-      end
+    local has_cloned_from_ghq = not not line:find(self._root, nil, true)
+    if has_cloned_from_ghq then
+      local dir = Path:new(line):make_relative(self._root)
+      local candidates = self:make_candidates(dir)
+      vim.iter(candidates):each(function(c)
+        table.insert(items, c)
+      end)
+      return
     end
     if self._cache[line] then
       vim.iter(self._cache[line]):each(function(v)
@@ -85,22 +100,14 @@ function Ghq:list()
 end
 
 function Ghq:fetch_remotes()
-  self.log:debug("start: permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
   vim.iter(self._git_jobs):each(function(url)
     a.run(a.async(function()
-      local permit = a.await(self._semaphore:acquire() --[[@as Future]])
-      self.log:debug("permits: %d waiting: %d", self._semaphore.permits, #self._semaphore.handles)
       local err, result = self.git:remote(url)
       if not err then
-        ---@cast result cmp_ghq.git.Remote
-        self._cache[url] = {
-          { label = result.host .. "/" .. result.org .. "/" .. result.repo },
-          { label = result.org .. "/" .. result.repo },
-          { label = result.repo },
-        }
+        ---@cast result string
+        self._cache[url] = self:make_candidates(result)
       end
       self._git_jobs[url] = nil
-      permit:forget()
     end)())
   end)
 end
