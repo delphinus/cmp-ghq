@@ -1,5 +1,5 @@
 local a = require "plenary.async_lib"
-local AsyncJob = require "cmp_ghq.async_job"
+local AsyncSystem = require "cmp_ghq.async_system"
 
 ---@class cmp_ghq.git.Opts
 ---@field executable string?
@@ -53,7 +53,7 @@ end
 ---@param dir string
 ---@return string[]?, string?
 function Git:remote(dir)
-  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "remote", "-v" }, cwd = dir })
+  local err, result = a.await(AsyncSystem({ self.config.executable, "remote", "-v" }, { cwd = dir }))
   if err then
     return err
   end

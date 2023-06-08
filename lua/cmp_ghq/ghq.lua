@@ -2,7 +2,7 @@ local lsp = require "cmp.types.lsp"
 local a = require "plenary.async_lib"
 local Path = require "plenary.path"
 local Git = require "cmp_ghq.git"
-local AsyncJob = require "cmp_ghq.async_job"
+local AsyncSystem = require "cmp_ghq.async_system"
 
 ---@class cmp_ghq.ghq.Config
 ---@field executable string
@@ -60,7 +60,7 @@ function Ghq:list()
   self.log:debug("cache: %s", #vim.tbl_keys(self._cache))
   if not self._root then
     self.log:debug "ghq root"
-    local err, result = a.await(AsyncJob { command = self.config.executable, args = { "root" } })
+    local err, result = a.await(AsyncSystem { self.config.executable, "root" })
     if err then
       return {}
     end
@@ -68,7 +68,7 @@ function Ghq:list()
   end
   self.log:debug "ghq list -p"
   ---@type string[]?, string[]?
-  local err, result = a.await(AsyncJob { command = self.config.executable, args = { "list", "-p" } })
+  local err, result = a.await(AsyncSystem { self.config.executable, "list", "-p" })
   if err then
     self.log:debug("ghq list -p: %s", err)
     return { items = {}, isIncomplete = true }
