@@ -1,58 +1,40 @@
-local a = require "plenary.async_lib"
-local default_config = require "cmp_ghq.default_config"
-local Ghq = require "cmp_ghq.ghq"
-local Logger = require "cmp_ghq.logger"
+local config = require "cmp_ghq.config"
+local ghq = require "cmp_ghq.ghq"
 
----@class cmp_ghq.source.Source: cmp.Source
----@field log cmp_ghq.logger.Logger
----@field ghq cmp_ghq.ghq.Ghq
-local Source = {}
+---@class CmpGhq
+local source = {}
 
----@param overrides table
----@return cmp_ghq.source.Source
-Source.new = function(overrides)
-  local log = Logger.new(overrides)
-  return setmetatable({
-    config = vim.tbl_extend("force", default_config, overrides),
-    ghq = Ghq.new(log),
-    log = log,
-  }, { __index = Source })
+---@return CmpGhq
+source.new = function()
+  config.set()
+  return setmetatable({}, { __index = source })
 end
 
-Source.complete = a.async_void(function(self, _, callback)
-  self.log:debug "completion start"
-  local list = self.ghq:list()
-  self:_remove_duplicates(list)
-  callback(list)
-  self.ghq:fetch_remotes()
-end)
-
-function Source:get_debug_name()
+---@return string
+source.get_debug_name = function()
   return "ghq"
 end
 
-function Source:is_available()
-  return true
+---@return boolean
+source.is_available = function()
+  return ghq.is_available
 end
 
-function Source:get_keyword_pattern()
-  return [[\w\+]]
+---@return string
+function source:get_keyword_pattern()
+  return config.keyword_pattern
 end
 
-function Source:get_trigger_characters()
-  return { "." }
+---@return string[]
+function source:get_trigger_characters()
+  return config.trigger_characters
 end
 
----@param list lsp.CompletionList
-function Source:_remove_duplicates(list)
-  local seen = {}
-  list.items = vim.iter(list.items):fold({}, function(a, b)
-    if not seen[b.label] then
-      table.insert(a, b)
-      seen[b.label] = true
-    end
-    return a
-  end)
+---@param request { context: cmp.Context, offset: integer }
+---@param callback fun(items?: vim.CompletedItem[]): nil
+---@return nil
+function source:complete(request, callback)
+  ghq.start(callback)
 end
 
-return Source
+return source
