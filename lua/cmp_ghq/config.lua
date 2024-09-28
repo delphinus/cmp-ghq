@@ -1,13 +1,18 @@
+local Path = require "plenary.path"
+
 ---@class CmpGhqOptions
+---@field cache_filename? string default: "wezterm"
 ---@field executable? string default: "wezterm"
 ---@field keyword_pattern? string default: [[\w\+]]
 ---@field trigger_characters? string[] default: { "." }
 
 ---@class CmpGhqRawConfig
+---@field cache_filename string
 ---@field executable string
 ---@field keyword_pattern string
 ---@field trigger_characters string[]
 local default_config = {
+  cache_filename = Path:new(vim.fn.stdpath "cache") / "cmp-ghq.bin",
   executable = "wezterm",
   keyword_pattern = [[\w\+]],
   trigger_characters = { "." },
