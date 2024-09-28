@@ -1,42 +1,26 @@
-local a = require "plenary.async_lib"
-local Job = require "plenary.job"
+local async = require "plenary.async"
 
-local async_system = a.wrap(vim.system, 3)
+local async_system = async.wrap(vim.system, 3)
 
-local function split(lines)
-  return vim
-    .iter(vim.split(lines, "\n"))
-    :filter(function(line)
-      return #line > 0
-    end)
-    :totable()
+local semaphore
+
+---@async
+---@param cmd string[]
+---@param opts? table
+---@return boolean ok
+---@return string result
+return function(cmd, opts)
+  opts = vim.tbl_extend("force", opts or {}, { text = true })
+  if not semaphore then
+    semaphore = async.control.Semaphore.new(5)
+  end
+  local permit = semaphore:acquire()
+  local ok, err_or_result = async.util.apcall(async_system, cmd, opts)
+  permit:forget()
+  if not ok then
+    return false, ("[cmp-ghq] failed to spawn: %s"):format(err_or_result)
+  elseif err_or_result.code ~= 0 then
+    return false, ("[cmp-ghq] returned error: %s: %s"):format(table.concat(cmd, " "), err_or_result.stderr)
+  end
+  return true, err_or_result.stdout
 end
-
----@class cmp_ghq.async_system.Config
----@field concurrency integer
-
----@class cmp_ghq.async_system.Options
----@field cwd string?
-
----@class cmp_ghq.async_system.AsyncSystem
----@field config cmp_ghq.async_system.Config
----@field _semaphore Semaphore
----@operator call(string[], cmp_ghq.async_system.Options): Future
-
-return setmetatable({ config = { concurrency = 5 } }, {
-  ---@param self cmp_ghq.async_system.AsyncSystem
-  ---@param cmd string[]
-  ---@param opts cmp_ghq.async_system.Options
-  __call = a.async(function(self, cmd, opts)
-    if not self._semaphore then
-      self._semaphore = a.util.Semaphore.new(self.config.concurrency)
-    end
-    local permit = a.await(self._semaphore:acquire() --[[@as Future]])
-    local result = a.await(async_system(cmd, opts))
-    permit:forget()
-    if result.code == 0 then
-      return nil, split(result.stdout)
-    end
-    return split(result.stderr)
-  end),
-}) --[[@as cmp_ghq.async_system.AsyncSystem]]
