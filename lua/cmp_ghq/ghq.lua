@@ -64,7 +64,7 @@ function Ghq:start()
     self:log("failed to ghq list_p: %s", result)
     return
   end
-  local items, seen = {}, {}, {}
+  local items, seen = {}, {}
   vim.iter(vim.gsplit(result, "\n", { plain = true, trimempty = true })):each(function(line)
     if not self.cache[line] then
       local has_cloned_from_ghq = not not line:find(self.root, nil, true)
