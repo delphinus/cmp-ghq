@@ -2,7 +2,6 @@ local async_system = require "cmp_ghq.async_system"
 local config = require "cmp_ghq.config"
 local git = require "cmp_ghq.git"
 local log = require "cmp_ghq.log"
-local timer = require "cmp_ghq.timer"
 
 local lsp = require "cmp.types.lsp"
 local Path = require "plenary.path"
@@ -31,14 +30,11 @@ Ghq.new = function()
     { __index = Ghq }
   )
   async.void(function()
-    local count = 0
     while true do
-      count = count + 1
-      local to_track = count % 10 == 0
-      if to_track then
-        timer.track(("fetch start: %d"):format(count))
+      local dir = rx.recv() --[[@as string?]]
+      if not dir then
+        break
       end
-      local dir = rx.recv()
       self.jobs[dir] = STATUS.STARTED
       local ok, result = git.remote(dir)
       if ok then
@@ -47,9 +43,6 @@ Ghq.new = function()
         log.debug("failed to fetch remote: %s", result)
       end
       self.jobs[dir] = STATUS.FINISHED
-      if to_track then
-        timer.track(("fetch finish: %d, %s"):format(count, dir))
-      end
     end
   end)()
   return self
@@ -92,6 +85,7 @@ function Ghq:start()
       self.jobs[line] = STATUS.REGISTERED
     end
   end)
+  self.tx.send()
   return {
     items = items,
     isIncomplete = not not vim.iter(pairs(self.jobs)):find(function(_, v)
