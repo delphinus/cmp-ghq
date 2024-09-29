@@ -1,1 +1,1 @@
-require('cmp').register_source('ghq', require('cmp_ghq'))
+require("cmp").register_source("ghq", require "cmp_ghq")

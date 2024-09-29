@@ -1,4 +1,5 @@
 ---@class FrecencyTimer
+---@field enabled boolean
 ---@field has_lazy boolean?
 local M = {
   enabled = not not vim.env.CMP_GHQ_DEBUG,
@@ -36,9 +37,12 @@ function M.pp()
     return a.t < b.t
   end)
   return table.concat(
-    vim.tbl_map(function(r)
-      return ("%8.3f : %s"):format(r.t, r.event)
-    end, result),
+    vim
+      .iter(result)
+      :map(function(r)
+        return ("%8.3f : %s"):format(r.t, r.event)
+      end)
+      :totable(),
     "\n"
   )
 end

@@ -1,9 +1,11 @@
+local async_system = require "cmp_ghq.async_system"
+local git = require "cmp_ghq.git"
+local log = require "cmp_ghq.log"
+local timer = require "cmp_ghq.timer"
+
 local lsp = require "cmp.types.lsp"
 local Path = require "plenary.path"
 local async = require "plenary.async"
-local async_system = require "cmp_ghq.async_system"
-local git = require "cmp_ghq.git"
-local timer = require "cmp_ghq.timer"
 
 ---@enum CmpGhqJobStatus
 local STATUS = {
@@ -13,7 +15,7 @@ local STATUS = {
 }
 
 ---@class CmpGhqGhq
----@field cache table<string, lsp.completionItem[]>
+---@field cache table<string, lsp.CompletionItem[]>
 ---@field root? string
 ---@field jobs table<string, CmpGhqJobStatus>
 ---@field tx { send: fun(...: any): nil }
@@ -37,7 +39,7 @@ Ghq.new = function()
       if ok then
         self.cache[dir] = self:make_candidate(result)
       else
-        self:log("failed to fetch remote: %s", result)
+        log.debug("failed to fetch remote: %s", result)
       end
       self.jobs[dir] = STATUS.FINISHED
       if to_track then
@@ -54,14 +56,14 @@ function Ghq:start()
   if not self.root then
     local ok, result = async_system { "ghq", "root" }
     if not ok then
-      self:log("failed to ghq root: %s", result)
+      log.debug("failed to ghq root: %s", result)
       return
     end
     self.root = result:gsub("\n", "")
   end
   local ok, result = async_system { "ghq", "list", "-p" }
   if not ok then
-    self:log("failed to ghq list_p: %s", result)
+    log.debug("failed to ghq list_p: %s", result)
     return
   end
   local items, seen = {}, {}
@@ -93,9 +95,8 @@ function Ghq:start()
   }
 end
 
----@private
 ---@param dir string
----@return lsp.completionItem[]
+---@return lsp.CompletionItem[]
 function Ghq:make_candidate(dir)
   local parts = vim.split(dir, Path.path.sep, { plain = true })
   return vim.iter(ipairs(parts)):fold({}, function(items, i, part)
@@ -110,11 +111,6 @@ function Ghq:make_candidate(dir)
     end
     return items
   end)
-end
-
----@param fmt string
-function Ghq:log(fmt, ...)
-  require("cmp.utils.debug").log(("[cmp-ghq] " .. fmt):format(...))
 end
 
 local self

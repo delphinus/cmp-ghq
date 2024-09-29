@@ -30,10 +30,9 @@ function source:get_trigger_characters()
   return config.trigger_characters
 end
 
----@param request { context: cmp.Context, offset: integer }
 ---@param callback fun(items?: vim.CompletedItem[]): nil
 ---@return nil
-function source:complete(request, callback)
+function source:complete(_, callback)
   ghq.start(callback)
 end
 
