@@ -1,0 +1,118 @@
+*cmp-ghq.txt*					       nvim-cmp source for Ghq
+
+License: MIT
+
+CONTENTS						       *cmp-ghq-content*
+
+Introduction		|cmp-ghq-introduction|
+Requirements		|cmp-ghq-requirements|
+Installation		|cmp-ghq-installation|
+Usage			|cmp-ghq-usage|
+Options			|cmp-ghq-options|
+
+
+==============================================================================
+INTRODUCTION						  *cmp-ghq-introduction*
+
+This plugin is a source for |nvim-cmp| to gather candidates from `ghq`, that is a
+CLI tool to manage Git repositories.
+
+x-motemen/ghq: Remote repository management made easy
+https://github.com/x-motemen/ghq
+
+
+==============================================================================
+REQUIREMENTS						  *cmp-ghq-requirements*
+
+* Neovim v0.10.0 or newer
+* |nvim-cmp|
+* plenary.nvim
+* executables: both `ghq` and Git
+
+This plugin needs plenary.nvim for dependency.
+
+nvim-lua/plenary.nvim: plenary: full; complete; entire; absolute; unqualified.
+All the lua functions I don't want to write twice.
+https://github.com/nvim-lua/plenary.nvim
+
+
+==============================================================================
+INSTALLATION						  *cmp-ghq-installation*
+
+This is an example for |lazy.nvim|.
+>lua
+    -- for lazy.nvim
+    { "delphinus/cmp-ghq" },
+    { "nvim-lua/plenary.nvim" },
+<
+
+==============================================================================
+USAGE								 *cmp-ghq-usage*
+
+Call with |cmp.setup|.
+>lua
+    local cmp = require "cmp"
+    cmp.setup {
+      sources = {
+	{ name = "ghq" },
+      },
+    }
+<
+You can supply any option here.
+>lua
+    cmp.setup {
+      sources = {
+	{
+	  name = "ghq",
+	  -- default values
+	  option = {
+	    concurrency = 5,
+	    ghq = "ghq",
+	    git = "git",
+	    keyword_pattern = [[\w\+]],
+	    trigger_characters = { "." },
+	  },
+	},
+      },
+    }
+<
+------------------------------------------------------------------------------
+Working Example					 *cmp-ghq-usage-working-example*
+
+This example is described on the assumption below.
+
+1. `ghq` is set up with this config. This means that `ghq get` clones a repository
+   under the last defined “root”: `~/git`. Also I want to manage Neovim plugins
+   with `ghq`, so I've added an optional “root”: `~/.local/share/nvimlazy`.
+>gitconfig
+    [ghq]
+    root = ~/.local/share/nvim/lazy
+    root = ~/git
+<
+2. Some repositories and Neovim plugins are already cloned as below.
+>
+    ~/.local/share/nvim/lazy/cmp-ghq
+    ~/.local/share/nvim/lazy/nvim-cmp
+    ~/.local/share/nvim/lazy/plenary.nvim
+    ~/git/github.com/delphinus/dotfiles
+    ~/git/github.com/neovim/neovim
+<
+With these settings, If you input 
+
+
+
+
+
+==============================================================================
+OPTIONS							       *cmp-ghq-options*
+
+						   *cmp-ghq-options-concurrency*
+concurrency ~
+
+Default: `5`
+Type: `integer`
+
+
+
+
+vim:tw=78:fo=tcq2mM:ts=8:ft=help:norl:noet
