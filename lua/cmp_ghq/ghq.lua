@@ -15,6 +15,7 @@ local STATUS = {
 }
 
 ---@class CmpGhqGhq
+---@field is_available boolean
 ---@field cache table<string, lsp.CompletionItem[]>
 ---@field root? string
 ---@field jobs table<string, CmpGhqJobStatus>
@@ -24,7 +25,10 @@ local Ghq = {}
 ---@return CmpGhqGhq
 Ghq.new = function()
   local tx, rx = async.control.channel.mpsc()
-  local self = setmetatable({ cache = {}, jobs = {}, tx = tx }, { __index = Ghq })
+  local self = setmetatable(
+    { cache = {}, is_available = (pcall(vim.system, { "ghq" })), jobs = {}, tx = tx },
+    { __index = Ghq }
+  )
   async.void(function()
     local count = 0
     while true do
@@ -113,18 +117,21 @@ function Ghq:make_candidate(dir)
   end)
 end
 
-local self
-return {
-  is_available = true,
-  ghq = function()
-    return self
-  end,
-  start = function(callback)
-    if not self then
-      self = Ghq.new()
+return setmetatable({}, {
+  __index = function(self, key)
+    ---@return CmpGhqGhq
+    local function instance()
+      return rawget(self, "instance")
     end
-    async.void(function()
-      callback(self:start())
-    end)()
+    if not instance() then
+      rawset(self, "instance", Ghq.new())
+    end
+    if key == "is_available" then
+      return instance().is_available
+    elseif key == "start" then
+      return async.void(function(callback)
+        callback(instance():start())
+      end)
+    end
   end,
-}
+})
