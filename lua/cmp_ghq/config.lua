@@ -1,14 +1,20 @@
 ---@class CmpGhqOptions
----@field executable? string default: "wezterm"
+---@field concurrency integer default: 5
+---@field ghq? string default: "ghq"
+---@field git? string default: "git"
 ---@field keyword_pattern? string default: [[\w\+]]
 ---@field trigger_characters? string[] default: { "." }
 
 ---@class CmpGhqRawConfig
----@field executable string
+---@field concurrency integer
+---@field ghq string
+---@field git string
 ---@field keyword_pattern string
 ---@field trigger_characters string[]
 local default_config = {
-  executable = "wezterm",
+  concurrency = 5,
+  ghq = "ghq",
+  git = "git",
   keyword_pattern = [[\w\+]],
   trigger_characters = { "." },
 }

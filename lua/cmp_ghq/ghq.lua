@@ -1,4 +1,5 @@
 local async_system = require "cmp_ghq.async_system"
+local config = require "cmp_ghq.config"
 local git = require "cmp_ghq.git"
 local log = require "cmp_ghq.log"
 local timer = require "cmp_ghq.timer"
@@ -26,7 +27,7 @@ local Ghq = {}
 Ghq.new = function()
   local tx, rx = async.control.channel.mpsc()
   local self = setmetatable(
-    { cache = {}, is_available = (pcall(vim.system, { "ghq" })), jobs = {}, tx = tx },
+    { cache = {}, is_available = (pcall(vim.system, { config.ghq })), jobs = {}, tx = tx },
     { __index = Ghq }
   )
   async.void(function()
@@ -58,14 +59,14 @@ end
 ---@return string[]?
 function Ghq:start()
   if not self.root then
-    local ok, result = async_system { "ghq", "root" }
+    local ok, result = async_system { config.ghq, "root" }
     if not ok then
       log.debug("failed to ghq root: %s", result)
       return
     end
     self.root = result:gsub("\n", "")
   end
-  local ok, result = async_system { "ghq", "list", "-p" }
+  local ok, result = async_system { config.ghq, "list", "-p" }
   if not ok then
     log.debug("failed to ghq list_p: %s", result)
     return

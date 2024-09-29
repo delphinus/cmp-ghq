@@ -1,3 +1,4 @@
+local config = require "cmp_ghq.config"
 local async = require "plenary.async"
 
 local async_system = async.wrap(vim.system, 3)
@@ -12,7 +13,7 @@ local semaphore
 return function(cmd, opts)
   opts = vim.tbl_extend("force", opts or {}, { text = true })
   if not semaphore then
-    semaphore = async.control.Semaphore.new(5)
+    semaphore = async.control.Semaphore.new(config.concurrency)
   end
   local permit = semaphore:acquire()
   local ok, err_or_result = async.util.apcall(async_system, cmd, opts)
