@@ -1,9 +1,15 @@
-local config = require "cmp_ghq.config"
-local async = require "plenary.async"
+local async = require "vim._async"
 
-local async_system = async.wrap(vim.system, 3)
-
-local semaphore
+---@param cmd string[]
+---@param opts table
+---@param cb fun(obj: vim.SystemCompleted): nil
+---@return nil
+local function safe_system(cmd, opts, cb)
+  local ok, err = pcall(vim.system, cmd, opts, cb)
+  if not ok then
+    cb { code = -1, signal = 0, stdout = "", stderr = tostring(err) }
+  end
+end
 
 ---@async
 ---@param cmd string[]
@@ -12,16 +18,9 @@ local semaphore
 ---@return string result
 return function(cmd, opts)
   opts = vim.tbl_extend("force", opts or {}, { text = true })
-  if not semaphore then
-    semaphore = async.control.Semaphore.new(config.concurrency)
+  local obj = async.await(3, safe_system, cmd, opts)
+  if obj.code ~= 0 then
+    return false, ("[cmp-ghq] returned error: %s: %s"):format(table.concat(cmd, " "), obj.stderr)
   end
-  local permit = semaphore:acquire()
-  local ok, err_or_result = async.util.apcall(async_system, cmd, opts)
-  permit:forget()
-  if not ok then
-    return false, ("[cmp-ghq] failed to spawn: %s"):format(err_or_result)
-  elseif err_or_result.code ~= 0 then
-    return false, ("[cmp-ghq] returned error: %s: %s"):format(table.concat(cmd, " "), err_or_result.stderr)
-  end
-  return true, err_or_result.stdout
+  return true, obj.stdout
 end

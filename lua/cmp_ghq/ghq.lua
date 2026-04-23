@@ -3,55 +3,28 @@ local config = require "cmp_ghq.config"
 local git = require "cmp_ghq.git"
 local log = require "cmp_ghq.log"
 
-local Path = require "plenary.path"
-local async = require "plenary.async"
+local async = require "vim._async"
 
 -- LSP CompletionItemKind values; inlined so this module does not depend on nvim-cmp.
 local CompletionItemKind = { Folder = 19 }
 
----@enum CmpGhqJobStatus
-local STATUS = {
-  REGISTERED = 0,
-  STARTED = 1,
-  FINISHED = 2,
-}
+-- ghq always uses POSIX paths, and vim.fs.relpath returns POSIX paths.
+local SEP = "/"
 
 ---@class CmpGhqGhq
 ---@field is_available boolean
 ---@field cache table<string, lsp.CompletionItem[]>
 ---@field root? string
----@field jobs table<string, CmpGhqJobStatus>
----@field tx { send: fun(...: any): nil }
+---@field jobs table<string, true>
 local Ghq = {}
 
 ---@return CmpGhqGhq
 Ghq.new = function()
-  local tx, rx = async.control.channel.mpsc()
-  local self = setmetatable(
-    { cache = {}, is_available = (pcall(vim.system, { config.ghq })), jobs = {}, tx = tx },
-    { __index = Ghq }
-  )
-  async.void(function()
-    while true do
-      local dir = rx.recv() --[[@as string?]]
-      if not dir then
-        break
-      end
-      self.jobs[dir] = STATUS.STARTED
-      local ok, result = git.remote(dir)
-      if ok then
-        self.cache[dir] = self:make_candidate(result)
-      else
-        log.debug("failed to fetch remote: %s", result)
-      end
-      self.jobs[dir] = STATUS.FINISHED
-    end
-  end)()
-  return self
+  return setmetatable({ cache = {}, is_available = (pcall(vim.system, { config.ghq })), jobs = {} }, { __index = Ghq })
 end
 
 ---@async
----@return string[]?
+---@return { items: lsp.CompletionItem[], isIncomplete: boolean }?
 function Ghq:start()
   if not self.root then
     local ok, result = async_system { config.ghq, "root" }
@@ -66,12 +39,12 @@ function Ghq:start()
     log.debug("failed to ghq list_p: %s", result)
     return
   end
-  local items, seen = {}, {}
+  local items, seen, pending = {}, {}, {}
   vim.iter(vim.gsplit(result, "\n", { plain = true, trimempty = true })):each(function(line)
     if not self.cache[line] then
       local has_cloned_from_ghq = not not line:find(self.root, nil, true)
       if has_cloned_from_ghq then
-        local dir = Path:new(line):make_relative(self.root)
+        local dir = vim.fs.relpath(self.root, line) or line
         self.cache[line] = self:make_candidate(dir)
       end
     end
@@ -83,23 +56,39 @@ function Ghq:start()
         end
       end)
     elseif not self.jobs[line] then
-      self.tx.send(line)
-      self.jobs[line] = STATUS.REGISTERED
+      self.jobs[line] = true
+      table.insert(pending, line)
     end
   end)
-  self.tx.send()
+  if #pending > 0 then
+    local funs = {}
+    for _, dir in ipairs(pending) do
+      table.insert(funs, function()
+        local r_ok, r_res = git.remote(dir)
+        if r_ok then
+          self.cache[dir] = self:make_candidate(r_res)
+        else
+          log.debug("failed to fetch remote: %s", r_res)
+        end
+        self.jobs[dir] = nil
+      end)
+    end
+    -- Fire-and-forget: caller does not wait for these. They populate the
+    -- cache so subsequent start() calls can resolve them synchronously.
+    async.run(function()
+      async.join(config.concurrency, funs)
+    end)
+  end
   return {
     items = items,
-    isIncomplete = not not vim.iter(pairs(self.jobs)):find(function(_, v)
-      return v ~= STATUS.FINISHED
-    end),
+    isIncomplete = next(self.jobs) ~= nil,
   }
 end
 
 ---@param dir string
 ---@return lsp.CompletionItem[]
 function Ghq:make_candidate(dir)
-  local parts = vim.split(dir, Path.path.sep, { plain = true })
+  local parts = vim.split(dir, SEP, { plain = true })
   return vim.iter(ipairs(parts)):fold({}, function(items, i, part)
     local function add(label)
       table.insert(items, { label = label, kind = CompletionItemKind.Folder, documentation = dir })
@@ -108,7 +97,7 @@ function Ghq:make_candidate(dir)
       add(part)
     end
     if i < #parts then
-      add(table.concat(vim.list_slice(parts, i, #parts), Path.path.sep))
+      add(table.concat(vim.list_slice(parts, i, #parts), SEP))
     end
     return items
   end)
@@ -130,12 +119,12 @@ return setmetatable({}, {
       ---@return fun(): nil cancel
       return function(callback)
         local cancelled = false
-        async.void(function()
+        async.run(function()
           local result = instance():start()
           if not cancelled then
             callback(result)
           end
-        end)()
+        end)
         return function()
           cancelled = true
         end
