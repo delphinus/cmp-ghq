@@ -1,8 +1,11 @@
 return {
   ---@param fmt string
   ---@param ... any
-  ---@retunr nil
+  ---@return nil
   debug = function(fmt, ...)
-    require("cmp.utils.debug").log(("[cmp-ghq] " .. fmt):format(...))
+    local ok, debug = pcall(require, "cmp.utils.debug")
+    if ok then
+      debug.log(("[cmp-ghq] " .. fmt):format(...))
+    end
   end,
 }

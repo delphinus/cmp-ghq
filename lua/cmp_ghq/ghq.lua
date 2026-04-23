@@ -3,9 +3,11 @@ local config = require "cmp_ghq.config"
 local git = require "cmp_ghq.git"
 local log = require "cmp_ghq.log"
 
-local lsp = require "cmp.types.lsp"
 local Path = require "plenary.path"
 local async = require "plenary.async"
+
+-- LSP CompletionItemKind values; inlined so this module does not depend on nvim-cmp.
+local CompletionItemKind = { Folder = 19 }
 
 ---@enum CmpGhqJobStatus
 local STATUS = {
@@ -100,7 +102,7 @@ function Ghq:make_candidate(dir)
   local parts = vim.split(dir, Path.path.sep, { plain = true })
   return vim.iter(ipairs(parts)):fold({}, function(items, i, part)
     local function add(label)
-      table.insert(items, { label = label, kind = lsp.CompletionItemKind.Folder, documentation = dir })
+      table.insert(items, { label = label, kind = CompletionItemKind.Folder, documentation = dir })
     end
     if #part > 2 then
       add(part)
@@ -124,9 +126,20 @@ return setmetatable({}, {
     if key == "is_available" then
       return instance().is_available
     elseif key == "start" then
-      return async.void(function(callback)
-        callback(instance():start())
-      end)
+      ---@param callback fun(result?: { items: lsp.CompletionItem[], isIncomplete: boolean }): nil
+      ---@return fun(): nil cancel
+      return function(callback)
+        local cancelled = false
+        async.void(function()
+          local result = instance():start()
+          if not cancelled then
+            callback(result)
+          end
+        end)()
+        return function()
+          cancelled = true
+        end
+      end
     end
   end,
 })

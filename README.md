@@ -1,8 +1,9 @@
 # cmp-ghq
 
-[nvim-cmp][] source for [ghq][]
+Completion source for [ghq][] — works with both [nvim-cmp][] and [blink.cmp][].
 
 [nvim-cmp]: https://github.com/hrsh7th/nvim-cmp
+[blink.cmp]: https://github.com/Saghen/blink.cmp
 [ghq]: https://github.com/x-motemen/ghq
 
 ***This plugin is highly experimental.***
@@ -11,5 +12,49 @@
 
 * Neovim HEAD
 * [plenary.nvim][]
+* `ghq` and `git` on `$PATH`
 
 [plenary.nvim]: https://github.com/nvim-lua/plenary.nvim
+
+## Setup
+
+### With nvim-cmp
+
+```lua
+{
+  "hrsh7th/nvim-cmp",
+  dependencies = { "delphinus/cmp-ghq" },
+  opts = function(_, opts)
+    table.insert(opts.sources, { name = "ghq" })
+  end,
+}
+```
+
+### With blink.cmp
+
+```lua
+{
+  "saghen/blink.cmp",
+  dependencies = { "delphinus/cmp-ghq" },
+  opts = {
+    sources = {
+      default = { "ghq" },
+      providers = {
+        ghq = { name = "ghq", module = "blink-cmp-ghq" },
+      },
+    },
+  },
+}
+```
+
+## Options
+
+| key                  | default     | description                                        |
+| -------------------- | ----------- | -------------------------------------------------- |
+| `concurrency`        | `5`         | Max concurrent `git remote -v` lookups.            |
+| `ghq`                | `"ghq"`     | Path to the `ghq` executable.                      |
+| `git`                | `"git"`     | Path to the `git` executable.                      |
+| `keyword_pattern`    | `[[\w\+]]`  | Pattern that triggers completion (nvim-cmp only).  |
+| `trigger_characters` | `{ "." }`   | Trigger characters.                                |
+
+For nvim-cmp, pass these under `option` of the source spec. For blink.cmp, pass them as the provider's `opts`.
