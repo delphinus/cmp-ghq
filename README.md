@@ -37,7 +37,15 @@ Completion source for [ghq][] — works with both [nvim-cmp][] and [blink.cmp][]
     sources = {
       default = { "ghq" },
       providers = {
-        ghq = { name = "ghq", module = "blink-cmp-ghq" },
+        ghq = {
+          name = "ghq",
+          module = "blink-cmp-ghq",
+          -- `ghq list -p` and the per-repo `git remote -v` lookups can take
+          -- tens of milliseconds. Mark the provider async so blink.cmp shows
+          -- results from cheaper sources (buffer, snippets, etc.) immediately
+          -- and merges ghq candidates in as they arrive.
+          async = true,
+        },
       },
     },
   },
