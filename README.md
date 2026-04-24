@@ -8,8 +8,6 @@ Completion source for [ghq][] — works with both [nvim-cmp][] and [blink.cmp][]
 [blink.cmp]: https://github.com/Saghen/blink.cmp
 [ghq]: https://github.com/x-motemen/ghq
 
-***This plugin is highly experimental.***
-
 ## Requirements
 
 * Neovim v0.12.0 or newer (uses `vim._async` internally)
