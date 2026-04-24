@@ -61,9 +61,8 @@ function Ghq:start()
     end
   end)
   if #pending > 0 then
-    local funs = {}
-    for _, dir in ipairs(pending) do
-      table.insert(funs, function()
+    local funs = vim.iter(pending):map(function(dir)
+      return function()
         local r_ok, r_res = git.remote(dir)
         if r_ok then
           self.cache[dir] = self:make_candidate(r_res)
@@ -71,8 +70,8 @@ function Ghq:start()
           log.debug("failed to fetch remote: %s", r_res)
         end
         self.jobs[dir] = nil
-      end)
-    end
+      end
+    end)
     -- Fire-and-forget: caller does not wait for these. They populate the
     -- cache so subsequent start() calls can resolve them synchronously.
     async.run(function()
