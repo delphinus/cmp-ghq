@@ -3,7 +3,7 @@
 ---@field ghq? string default: "ghq"
 ---@field git? string default: "git"
 ---@field keyword_pattern? string default: [[\w\+]]
----@field trigger_characters? string[] default: { "." }
+---@field trigger_characters? string[] default: {} (no trigger characters)
 
 ---@class CmpGhqRawConfig
 ---@field concurrency integer
@@ -16,7 +16,7 @@ local default_config = {
   ghq = "ghq",
   git = "git",
   keyword_pattern = [[\w\+]],
-  trigger_characters = { "." },
+  trigger_characters = {},
 }
 
 ---@class CmpGhqConfig: CmpGhqRawConfig
