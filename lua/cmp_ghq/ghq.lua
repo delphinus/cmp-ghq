@@ -185,7 +185,11 @@ function Ghq:make_candidate(dir)
   end)
 end
 
-return setmetatable({}, {
+return setmetatable({
+  -- Test hooks: not part of the stable public API.
+  _Ghq = Ghq,
+  _Token = Token,
+}, {
   __index = function(self, key)
     ---@return CmpGhqGhq
     local function instance()
