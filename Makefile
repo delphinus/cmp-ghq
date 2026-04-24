@@ -11,8 +11,7 @@ $(MINI_NVIM):
 
 test: deps
 	@nvim --headless --noplugin -u tests/minimal_init.lua \
-		-c "lua MiniTest.run()" \
-		-c "qa!"
+		-c "lua MiniTest.run()"
 
 fmt:
 	@$(STYLUA) lua/ tests/

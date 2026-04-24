@@ -1,5 +1,7 @@
 # cmp-ghq
 
+[![CI](https://github.com/delphinus/cmp-ghq/actions/workflows/ci.yml/badge.svg)](https://github.com/delphinus/cmp-ghq/actions/workflows/ci.yml)
+
 Completion source for [ghq][] — works with both [nvim-cmp][] and [blink.cmp][].
 
 [nvim-cmp]: https://github.com/hrsh7th/nvim-cmp
