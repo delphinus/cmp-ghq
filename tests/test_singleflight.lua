@@ -1,4 +1,4 @@
-local async = require "vim._async"
+local async = require "cmp_ghq.async"
 
 -- A controllable async_system replacement. Each call records its arguments
 -- in `call_log` and parks the resume callback in `pending`; the test then
