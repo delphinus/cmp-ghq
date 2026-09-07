@@ -36,6 +36,40 @@ jobs:
       - name: Run tests
         run: make test
 
+  typecheck:
+    name: Typecheck (nvim ${{ matrix.neovim }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        # .luarc.json pulls Neovim's own annotations out of $VIMRUNTIME, so the
+        # result depends on which runtime is installed. Cover the same versions
+        # the tests do.
+        neovim: [v0.12.0, stable, nightly]
+    env:
+      LUALS_VERSION: 3.19.1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+
+      - name: Install lua-language-server
+        run: |
+          mkdir -p "$RUNNER_TEMP/luals"
+          curl -fsSL "https://github.com/LuaLS/lua-language-server/releases/download/$LUALS_VERSION/lua-language-server-$LUALS_VERSION-linux-x64.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP/luals"
+          echo "$RUNNER_TEMP/luals/bin" >> "$GITHUB_PATH"
+
+      - name: Run lua-language-server --check
+        run: make lint
+
   fmt:
     name: Stylua
     runs-on: ubuntu-latest

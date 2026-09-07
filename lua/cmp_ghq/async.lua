@@ -43,6 +43,11 @@ local function join(max_jobs, funs)
       -- pipeline; `pawait` below discards it.
       return async.run(function()
         return semaphore:with(function()
+          -- `with` declares a variadic `R...` return, which LuaLS cannot
+          -- unify with the plain `boolean` that `pcall` yields for a
+          -- `fun(): nil`. `vim/async/_semaphore.lua` silences the same class
+          -- of diagnostic for the same reason.
+          ---@diagnostic disable-next-line: return-type-mismatch
           return copcall(fun)
         end)
       end)

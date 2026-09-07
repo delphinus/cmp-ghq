@@ -73,11 +73,29 @@ Tests use [mini.test][]. The first run fetches it into `tests/deps/`
 ```sh
 make test       # fetch deps if needed, then run all tests headless
 make deps       # just fetch test deps
+make lint       # lua-language-server --check against .luarc.json
 make fmt        # run stylua on lua/ and tests/
 make fmt-check  # check formatting without rewriting
 ```
 
-By default `make fmt` looks for `stylua` on `$PATH`. Override it if it
-lives elsewhere, e.g. `STYLUA=~/.local/share/nvim/mason/bin/stylua make fmt`.
+All three run in CI, `test` and `lint` against Neovim v0.12.0, `stable`
+and `nightly`.
+
+Each target looks for its tool on `$PATH`; override with `NVIM`, `LUALS`
+or `STYLUA` if it lives elsewhere:
+
+```sh
+NVIM=/path/to/nvim make test
+LUALS=~/.local/share/nvim/mason/bin/lua-language-server make lint
+STYLUA=~/.local/share/nvim/mason/bin/stylua make fmt
+```
+
+`make lint` asks `$(NVIM)` for its `$VIMRUNTIME` and hands it to
+lua-language-server, which `.luarc.json` references as the library path —
+so the result reflects whichever Neovim you point it at. `luacheck` is
+not used: lua-language-server covers the same ground (`.luarc.json`
+raises `unused-local`, `unused-function`, `unused-vararg` and
+`lowercase-global` to warnings) and adds type and annotation checking on
+top.
 
 [mini.test]: https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-test.md

@@ -30,7 +30,7 @@ function source:get_trigger_characters()
   return config.trigger_characters
 end
 
----@param callback fun(items?: vim.CompletedItem[]): nil
+---@param callback fun(response?: lsp.CompletionList): nil
 ---@return nil
 function source:complete(_, callback)
   ghq.start(callback)
