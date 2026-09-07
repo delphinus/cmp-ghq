@@ -10,7 +10,8 @@ Completion source for [ghq][] — works with both [nvim-cmp][] and [blink.cmp][]
 
 ## Requirements
 
-* Neovim v0.12.0 or newer (uses `vim._async` internally)
+* Neovim v0.12.0 or newer (uses `vim.async` internally, falling back to the
+  private `vim._async` on versions that predate it)
 * `ghq` and `git` on `$PATH`
 
 ## Setup

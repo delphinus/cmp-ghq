@@ -3,7 +3,7 @@ local config = require "cmp_ghq.config"
 local git = require "cmp_ghq.git"
 local log = require "cmp_ghq.log"
 
-local async = require "vim._async"
+local async = require "cmp_ghq.async"
 
 -- LSP CompletionItemKind values; inlined so this module does not depend on nvim-cmp.
 local CompletionItemKind = { Folder = 19 }
