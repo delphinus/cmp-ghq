@@ -1,4 +1,4 @@
-local async = require "vim._async"
+local async = require "cmp_ghq.async"
 
 -- All vim.system handles spawned via this module that haven't exited yet.
 -- Used by the VimLeavePre autocmd below to send SIGTERM on Neovim exit so we
