@@ -4,8 +4,18 @@
 -- of `vim.async.semaphore`, so reimplement it here. Prefer the public module
 -- and fall back to the private one on older versions.
 
+-- The subset of the runtime this plugin uses, described loosely enough that
+-- neither backend's annotations reach the call sites. `vim.async` in
+-- particular declares generic return types on `run`, which would otherwise
+-- make every fire-and-forget `run(function() ... end)` a missing-return
+-- diagnostic.
+---@class CmpGhqAsync
+---@field run fun(func: async fun(): nil): nil
+---@field await async fun(argc: integer, func: function, ...: any): any
+---@field join async fun(max_jobs: integer, funs: (async fun(): nil)[]): nil
+
 if not vim.async then
-  return require "vim._async"
+  return require "vim._async" --[[@as CmpGhqAsync]]
 end
 
 local async = vim.async
@@ -29,9 +39,11 @@ local function join(max_jobs, funs)
   local tasks = vim
     .iter(funs)
     :map(function(fun)
+      -- Each closure hands its result up so the batch stays a plain value
+      -- pipeline; `pawait` below discards it.
       return async.run(function()
-        semaphore:with(function()
-          copcall(fun)
+        return semaphore:with(function()
+          return copcall(fun)
         end)
       end)
     end)
@@ -41,4 +53,4 @@ local function join(max_jobs, funs)
   end)
 end
 
-return setmetatable({ join = join }, { __index = async })
+return setmetatable({ join = join }, { __index = async }) --[[@as CmpGhqAsync]]

@@ -24,6 +24,7 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 return function(cmd, opts)
   opts = vim.tbl_extend("force", opts or {}, { text = true })
   local handle ---@type vim.SystemObj?
+  ---@type vim.SystemCompleted
   local obj = async.await(3, function(c, o, cb)
     local ok, h = pcall(vim.system, c, o, function(...)
       if handle then
