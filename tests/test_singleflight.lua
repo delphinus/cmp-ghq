@@ -101,7 +101,9 @@ T["cancel of one start does not affect concurrent siblings"] = function()
   local fake = new_fake_async()
   local M = load_ghq_with_fake(fake)
 
-  local r1, r2 = "<not-called>", "<not-called>"
+  -- Sentinel strings, replaced by the completion payload (or left alone
+  -- when the caller was cancelled), so the type is deliberately open.
+  local r1, r2 = "<not-called>", "<not-called>" ---@type any, any
   local cancel1 = M.start(function(r)
     r1 = r
   end)

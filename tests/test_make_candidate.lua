@@ -5,6 +5,11 @@ local T = MiniTest.new_set()
 -- LSP CompletionItemKind.Folder = 19
 local FOLDER = 19
 
+-- make_candidate never touches `self`, so the specs call it unbound. This
+-- placeholder only satisfies the method signature; going through Ghq.new()
+-- would spawn the `ghq` availability probe for nothing.
+local dummy_self = { is_available = false, cache = {}, jobs = {} } --[[@as CmpGhqGhq]]
+
 ---Build a stub LSP item with the same shape Ghq:make_candidate produces.
 ---@param label string
 ---@param doc string
@@ -14,7 +19,7 @@ local function item(label, doc)
 end
 
 T["multi-segment expands into part+suffix labels"] = function()
-  local got = Ghq.make_candidate({}, "github.com/user/repo")
+  local got = Ghq.make_candidate(dummy_self, "github.com/user/repo")
   MiniTest.expect.equality(got, {
     item("github.com", "github.com/user/repo"),
     item("github.com/user/repo", "github.com/user/repo"),
@@ -26,7 +31,7 @@ end
 
 T["short part (len <= 2) is dropped from labels but suffix is kept"] = function()
   -- "ab" has length 2, so it never appears as a standalone label.
-  local got = Ghq.make_candidate({}, "ab/foo")
+  local got = Ghq.make_candidate(dummy_self, "ab/foo")
   MiniTest.expect.equality(got, {
     item("ab/foo", "ab/foo"),
     item("foo", "ab/foo"),
@@ -34,7 +39,7 @@ T["short part (len <= 2) is dropped from labels but suffix is kept"] = function(
 end
 
 T["all-short parts produce only suffix labels"] = function()
-  local got = Ghq.make_candidate({}, "x/y/z")
+  local got = Ghq.make_candidate(dummy_self, "x/y/z")
   MiniTest.expect.equality(got, {
     item("x/y/z", "x/y/z"),
     item("y/z", "x/y/z"),
@@ -42,13 +47,13 @@ T["all-short parts produce only suffix labels"] = function()
 end
 
 T["single segment of length > 2 returns just the label"] = function()
-  local got = Ghq.make_candidate({}, "repo")
+  local got = Ghq.make_candidate(dummy_self, "repo")
   MiniTest.expect.equality(got, { item("repo", "repo") })
 end
 
 T["single short segment returns nothing"] = function()
   -- "ab" alone: too short to be a label, no suffix to add either.
-  local got = Ghq.make_candidate({}, "ab")
+  local got = Ghq.make_candidate(dummy_self, "ab")
   MiniTest.expect.equality(got, {})
 end
 

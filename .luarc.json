@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "workspace": {
+    "library": ["$VIMRUNTIME/lua"],
+    "ignoreDir": ["tests/deps"],
+    "checkThirdParty": false
+  },
+  "diagnostics": {
+    "globals": ["MiniTest"],
+    "severity": {
+      "unused-local": "Warning",
+      "unused-function": "Warning",
+      "unused-vararg": "Warning",
+      "lowercase-global": "Warning"
+    }
+  }
+}
